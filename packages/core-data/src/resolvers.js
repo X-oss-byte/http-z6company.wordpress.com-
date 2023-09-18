@@ -14,7 +14,11 @@ import apiFetch from '@wordpress/api-fetch';
  */
 import { STORE_NAME } from './name';
 import { getOrLoadEntitiesConfig, DEFAULT_ENTITY_KEY } from './entities';
-import { forwardResolver, getNormalizedCommaSeparable } from './utils';
+import {
+	forwardResolver,
+	getNormalizedCommaSeparable,
+	parseEntityName,
+} from './utils';
 import { getSyncProvider } from './sync';
 
 /**
@@ -58,9 +62,19 @@ export const getEntityRecord =
 	( kind, name, key = '', query ) =>
 	async ( { select, dispatch } ) => {
 		const configs = await dispatch( getOrLoadEntitiesConfig( kind ) );
+		const {
+			name: parsedName,
+			key: parsedKey,
+			isRevision,
+		} = parseEntityName( name );
 		const entityConfig = configs.find(
-			( config ) => config.name === name && config.kind === kind
+			( config ) => config.name === parsedName && config.kind === kind
 		);
+
+		if ( isRevision && ! entityConfig?.supports?.revisions ) {
+			return;
+		}
+
 		if ( ! entityConfig || entityConfig?.__experimentalNoFetch ) {
 			return;
 		}
@@ -73,10 +87,12 @@ export const getEntityRecord =
 
 		try {
 			// Entity supports configs,
-			// use the sync algorithm instead of the old fetch behavior.
+			// use the sync algorithm instead of the old fetch behavior,
+			// but not for revisions. @TODO check this.
 			if (
 				window.__experimentalEnableSync &&
 				entityConfig.syncConfig &&
+				! isRevision &&
 				! query
 			) {
 				if ( process.env.IS_GUTENBERG_PLUGIN ) {
@@ -132,20 +148,16 @@ export const getEntityRecord =
 					};
 				}
 
-				// Disable reason: While true that an early return could leave `path`
-				// unused, it's important that path is derived using the query prior to
-				// additional query modifications in the condition below, since those
-				// modifications are relevant to how the data is tracked in state, and not
-				// for how the request is made to the REST API.
+				const baseUrl = isRevision
+					? entityConfig.getRevisionsUrl( parsedKey, key )
+					: entityConfig.baseURL + ( key ? '/' + key : '' );
 
-				// eslint-disable-next-line @wordpress/no-unused-vars-before-return
-				const path = addQueryArgs(
-					entityConfig.baseURL + ( key ? '/' + key : '' ),
-					{
-						...entityConfig.baseURLParams,
-						...query,
-					}
-				);
+				const path = addQueryArgs( baseUrl, {
+					...( isRevision
+						? entityConfig.revisionURLParams
+						: entityConfig.baseURLParams ),
+					...query,
+				} );
 
 				if ( query !== undefined ) {
 					query = { ...query, include: [ key ] };
@@ -153,11 +165,14 @@ export const getEntityRecord =
 					// The resolution cache won't consider query as reusable based on the
 					// fields, so it's tested here, prior to initiating the REST request,
 					// and without causing `getEntityRecords` resolution to occur.
+					// @TODO how to handle revisions here?
+					// @TODO will it know if a new revision has been created?
 					const hasRecords = select.hasEntityRecords(
 						kind,
 						name,
 						query
 					);
+
 					if ( hasRecords ) {
 						return;
 					}
@@ -193,9 +208,19 @@ export const getEntityRecords =
 	( kind, name, query = {} ) =>
 	async ( { dispatch } ) => {
 		const configs = await dispatch( getOrLoadEntitiesConfig( kind ) );
+		const {
+			name: parsedName,
+			key: parsedKey,
+			isRevision,
+		} = parseEntityName( name );
 		const entityConfig = configs.find(
-			( config ) => config.name === name && config.kind === kind
+			( config ) => config.name === parsedName && config.kind === kind
 		);
+
+		if ( isRevision && ! entityConfig?.supports?.revisions ) {
+			return;
+		}
+
 		if ( ! entityConfig || entityConfig?.__experimentalNoFetch ) {
 			return;
 		}
@@ -223,8 +248,14 @@ export const getEntityRecords =
 				};
 			}
 
-			const path = addQueryArgs( entityConfig.baseURL, {
-				...entityConfig.baseURLParams,
+			const baseUrl = isRevision
+				? entityConfig.getRevisionsUrl( parsedKey )
+				: entityConfig.baseURL;
+
+			const path = addQueryArgs( baseUrl, {
+				...( isRevision
+					? entityConfig.revisionURLParams
+					: entityConfig.baseURLParams ),
 				...query,
 			} );
 
@@ -246,7 +277,7 @@ export const getEntityRecords =
 
 			// If we request fields but the result doesn't contain the fields,
 			// explicitly set these fields as "undefined"
-			// that way we consider the query "fullfilled".
+			// that way we consider the query "fulfilled".
 			if ( query._fields ) {
 				records = records.map( ( record ) => {
 					query._fields.split( ',' ).forEach( ( field ) => {
@@ -295,6 +326,18 @@ export const getEntityRecords =
 	};
 
 getEntityRecords.shouldInvalidate = ( action, kind, name ) => {
+	// Invalidate cache when a new revision is created.
+	if ( action.type === 'SAVE_ENTITY_RECORD_FINISH' ) {
+		const { name: parsedName, key: parsedKey } = parseEntityName( name );
+
+		return (
+			kind === action.kind &&
+			parsedName === action.name &&
+			! action.error &&
+			Number( parsedKey ) === action.recordId
+		);
+	}
+
 	return (
 		( action.type === 'RECEIVE_ITEMS' || action.type === 'REMOVE_ITEMS' ) &&
 		action.invalidateCache &&
@@ -324,7 +367,7 @@ export const getCurrentTheme =
 export const getThemeSupports = forwardResolver( 'getCurrentTheme' );
 
 /**
- * Requests a preview from the from the Embed API.
+ * Requests a preview from the Embed API.
  *
  * @param {string} url URL to get the preview for.
  */
@@ -707,4 +750,58 @@ export const getNavigationFallbackId =
 				fallback?.id,
 			] );
 		}
+	};
+
+/**
+ * Requests an entity's revisions from the REST API.
+ *
+ * @param {string}           kind     Entity kind.
+ * @param {string}           name     Entity name.
+ * @param {number|string}    parentId Record's key whose revisions you wish to fetch.
+ * @param {Object|undefined} query    Optional object of query parameters to
+ *                                    include with request. If requesting specific
+ *                                    fields, fields must always include the ID.
+ */
+export const getEntityRevisions =
+	( kind, name, parentId, query = {} ) =>
+	async ( { resolveSelect } ) => {
+		await resolveSelect.getEntityRecords(
+			kind,
+			`${ name }:${ parentId }:revisions`,
+			query
+		);
+	};
+
+getEntityRevisions.shouldInvalidate = ( action, kind, name, key ) => {
+	// Invalidate cache when a new revision is created.
+	if ( action.type === 'SAVE_ENTITY_RECORD_FINISH' ) {
+		return (
+			name === action.name &&
+			kind === action.kind &&
+			! action.error &&
+			key === action.recordId
+		);
+	}
+};
+
+/**
+ * Requests a specific Entity revision from the REST API.
+ *
+ * @param {string}           kind     Entity kind.
+ * @param {string}           name     Entity name.
+ * @param {number|string}    parentId Record's key whose revisions you wish to fetch.
+ * @param {number|string}    key      The Revision's key.
+ * @param {Object|undefined} query    Optional object of query parameters to
+ *                                    include with request. If requesting specific
+ *                                    fields, fields must always include the ID.
+ */
+export const getEntityRevision =
+	( kind, name, parentId, key, query = {} ) =>
+	async ( { resolveSelect } ) => {
+		await resolveSelect.getEntityRecord(
+			kind,
+			`${ name }:${ parentId }:revisions`,
+			key,
+			query
+		);
 	};
