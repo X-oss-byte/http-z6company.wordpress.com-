@@ -5,7 +5,12 @@
  */
 import { test, Metrics } from '@wordpress/e2e-test-utils-playwright';
 
-const results = {
+/**
+ * Internal dependencies
+ */
+import type { WPRawPerformanceResults } from '../config/performance-reporter';
+
+const results: WPRawPerformanceResults = {
 	timeToFirstByte: [],
 	largestContentfulPaint: [],
 	lcpMinusTtfb: [],
@@ -13,21 +18,22 @@ const results = {
 
 test.describe( 'Front End Performance', () => {
 	test.use( {
-		storageState: {}, // User will be logged out.
+		storageState: undefined, // User will be logged out.
 		metrics: async ( { page }, use ) => {
 			await use( new Metrics( { page } ) );
 		},
 	} );
 
 	test.beforeAll( async ( { requestUtils } ) => {
-		await requestUtils.activateTheme( 'twentytwentyone' );
+		await requestUtils.activateTheme( 'twentytwentythree' );
 	} );
 
-	test.afterAll( async ( {}, testInfo ) => {
+	test.afterAll( async ( { requestUtils }, testInfo ) => {
 		await testInfo.attach( 'results', {
 			body: JSON.stringify( results, null, 2 ),
 			contentType: 'application/json',
 		} );
+		await requestUtils.activateTheme( 'twentytwentyone' );
 	} );
 
 	const samples = 16;
@@ -48,9 +54,9 @@ test.describe( 'Front End Performance', () => {
 
 			// Save the results.
 			if ( i > throwaway ) {
-				results.largestContentfulPaint.push( lcp );
-				results.timeToFirstByte.push( ttfb );
-				results.lcpMinusTtfb.push( lcp - ttfb );
+				results.largestContentfulPaint!.push( lcp );
+				results.timeToFirstByte!.push( ttfb );
+				results.lcpMinusTtfb!.push( lcp - ttfb );
 			}
 		} );
 	}

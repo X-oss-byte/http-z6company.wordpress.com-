@@ -14,7 +14,12 @@ import { sum } from '../utils.js';
 // See https://github.com/WordPress/gutenberg/issues/51383#issuecomment-1613460429
 const BROWSER_IDLE_WAIT = 1000;
 
-const results = {
+/**
+ * Internal dependencies
+ */
+import type { WPRawPerformanceResults } from '../config/performance-reporter';
+
+const results: WPRawPerformanceResults = {
 	serverResponse: [],
 	firstPaint: [],
 	domContentLoaded: [],

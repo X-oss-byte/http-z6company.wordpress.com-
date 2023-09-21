@@ -16,22 +16,22 @@ import type {
 import { average, median, minimum, maximum, round } from '../utils';
 
 export interface WPRawPerformanceResults {
-	timeToFirstByte: number[];
-	largestContentfulPaint: number[];
-	lcpMinusTtfb: number[];
-	serverResponse: number[];
-	firstPaint: number[];
-	domContentLoaded: number[];
-	loaded: number[];
-	firstContentfulPaint: number[];
-	firstBlock: number[];
-	type: number[];
-	typeContainer: number[];
-	focus: number[];
-	inserterOpen: number[];
-	inserterSearch: number[];
-	inserterHover: number[];
-	listViewOpen: number[];
+	timeToFirstByte?: number[];
+	largestContentfulPaint?: number[];
+	lcpMinusTtfb?: number[];
+	serverResponse?: number[];
+	firstPaint?: number[];
+	domContentLoaded?: number[];
+	loaded?: number[];
+	firstContentfulPaint?: number[];
+	firstBlock?: number[];
+	type?: number[];
+	typeContainer?: number[];
+	focus?: number[];
+	inserterOpen?: number[];
+	inserterSearch?: number[];
+	inserterHover?: number[];
+	listViewOpen?: number[];
 }
 
 export interface WPPerformanceResults {
