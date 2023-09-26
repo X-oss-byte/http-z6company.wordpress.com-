@@ -326,17 +326,13 @@ export const getEntityRecord = createSelector(
 		key: EntityRecordKey,
 		query?: GetRecordsHttpQuery
 	): EntityRecord | undefined => {
-		// @TODO this is a mess.
-		// @TODO Create predictable parsing rules for names like post:[key]:revisions.
-		// @TODO update the resolver to fetch the revision item.
 		const {
 			name: parsedName,
 			key: parsedKey,
 			isRevision,
 		} = parseEntityName( name );
-
 		const queriedState = isRevision
-			? state.entities.records?.[ kind ]?.[ parsedName[ 0 ] ]?.revisions[
+			? state.entities.records?.[ kind ]?.[ parsedName ]?.revisions[
 					parsedKey
 			  ]
 			: state.entities.records?.[ kind ]?.[ name ]?.queriedData;
@@ -344,17 +340,9 @@ export const getEntityRecord = createSelector(
 			return undefined;
 		}
 
-		const queryParams = isRevision
-			? {
-					// @TODO check if this is the default for revisions (should be view?). Is there anything else?
-					context: 'view',
-					...query,
-			  }
-			: query;
+		const context = query?.context ?? 'default';
 
-		const context = queryParams?.context ?? 'default';
-
-		if ( queryParams === undefined ) {
+		if ( query === undefined ) {
 			// If expecting a complete item, validate that completeness.
 			if ( ! queriedState.itemIsComplete[ context ]?.[ key ] ) {
 				return undefined;
@@ -364,10 +352,9 @@ export const getEntityRecord = createSelector(
 		}
 
 		const item = queriedState.items[ context ]?.[ key ];
-		if ( item && queryParams._fields ) {
+		if ( item && query._fields ) {
 			const filteredItem = {};
-			const fields =
-				getNormalizedCommaSeparable( queryParams._fields ) ?? [];
+			const fields = getNormalizedCommaSeparable( query._fields ) ?? [];
 			for ( let f = 0; f < fields.length; f++ ) {
 				const field = fields[ f ].split( '.' );
 				let value = item;
@@ -387,16 +374,7 @@ export const getEntityRecord = createSelector(
 			key: parsedKey,
 			isRevision,
 		} = parseEntityName( name );
-		const isRevision = splitName?.[ 2 ] === 'revisions';
-		const queryParams = isRevision
-			? {
-					// @TODO check if this is the default for revisions (should be view?). Is there anything else?
-					context: 'view',
-					...query,
-			  }
-			: query;
-
-		const context = queryParams?.context ?? 'default';
+		const context = query?.context ?? 'default';
 
 		return [
 			isRevision
@@ -565,30 +543,24 @@ export const getEntityRecords = ( <
 ): EntityRecord[] | null => {
 	// Queried data state is prepopulated for all known entities. If this is not
 	// assigned for the given parameters, then it is known to not exist.
-	// @TODO this is a mess.
-	// @TODO Create predictable parsing rules for names like post:[key]:revisions.
-	const splitName = name?.split( ':' );
-	if ( splitName?.[ 2 ] === 'revisions' ) {
+
+	const {
+		name: parsedName,
+		key: parsedKey,
+		isRevision,
+	} = parseEntityName( name );
+
+	if ( isRevision ) {
 		const queriedStateRevisions =
-			state.entities.records?.[ kind ]?.[ splitName[ 0 ] ]?.revisions[
-				splitName[ 1 ]
+			state.entities.records?.[ kind ]?.[ parsedName ]?.revisions[
+				parsedKey
 			];
 
 		if ( ! queriedStateRevisions ) {
 			return null;
 		}
-		const defaultQueryParams = {
-			// @TODO Default query params for revisions should be defined in the entity config?
-			order: 'desc',
-			orderby: 'date',
-			// @TODO check if this is the default for revisions (should be view?). Is there anything else?
-			context: 'view',
-		};
 
-		return getQueriedItems( queriedStateRevisions, {
-			...query,
-			...defaultQueryParams,
-		} );
+		return getQueriedItems( queriedStateRevisions, query );
 	}
 
 	const queriedState =
@@ -1397,4 +1369,39 @@ export function getCurrentThemeGlobalStylesRevisions(
 	}
 
 	return state.themeGlobalStyleRevisions[ currentGlobalStylesId ];
+}
+
+// @TODO: document and types
+// Test on global styles revisions.
+export function getRevisions(
+	state: State,
+	kind: string,
+	name: string,
+	key: EntityRecordKey,
+	query?: GetRecordsHttpQuery
+) {
+	return getEntityRecords(
+		state,
+		kind,
+		`${ name }:${ key }:revisions`,
+		query
+	);
+}
+
+// @TODO: document and types
+export function getRevision(
+	state: State,
+	kind: string,
+	name: string,
+	parentId: EntityRecordKey,
+	key: EntityRecordKey,
+	query?: GetRecordsHttpQuery
+) {
+	return getEntityRecord(
+		state,
+		kind,
+		`${ name }:${ parentId }:revisions`,
+		key,
+		query
+	);
 }

@@ -701,6 +701,10 @@ _Returns_
 
 -   A value whose reference will change only when an edit occurs.
 
+### getRevisions
+
+Undocumented declaration.
+
 ### getThemeSupports
 
 Return theme supports data in the index.

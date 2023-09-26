@@ -452,6 +452,54 @@ describe( 'getEntityRecords', () => {
 		expect( postTypeFirstRecords ).toBe( postTypeSecondRecords );
 		expect( wpBlockFirstRecords ).toBe( wpBlockSecondRecords );
 	} );
+
+	it( 'should return revisions', () => {
+		const state = deepFreeze( {
+			entities: {
+				records: {
+					postType: {
+						post: {
+							revisions: {
+								1: {
+									items: {
+										default: {
+											10: {
+												id: 10,
+												content: 'chicken',
+												author: 'bob',
+												parent: 1,
+											},
+										},
+									},
+									itemIsComplete: {
+										default: {
+											10: true,
+										},
+									},
+									queries: {
+										default: {
+											'': [ 10 ],
+										},
+									},
+								},
+							},
+						},
+					},
+				},
+			},
+		} );
+
+		expect(
+			getEntityRecords( state, 'postType', 'post:1:revisions' )
+		).toStrictEqual( [
+			{
+				id: 10,
+				content: 'chicken',
+				author: 'bob',
+				parent: 1,
+			},
+		] );
+	} );
 } );
 
 describe( '__experimentalGetDirtyEntityRecords', () => {

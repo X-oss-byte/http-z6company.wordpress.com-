@@ -207,6 +207,14 @@ export const rootEntitiesConfig = [
 		baseURLParams: { context: 'edit' },
 		plural: 'globalStylesVariations', // Should be different than name.
 		getTitle: ( record ) => record?.title?.rendered || record?.title,
+		getRevisionsUrl: ( parentId, revisionId ) =>
+			`/wp/v2/global-styles/${ parentId }/revisions${
+				revisionId ? '/' + revisionId : ''
+			}`,
+		revisionURLParams: { context: 'view' },
+		supports: {
+			revisions: true
+		}
 	},
 	{
 		label: __( 'Themes' ),
@@ -336,6 +344,7 @@ async function loadPostTypeEntities() {
 				}/${ parentId }/revisions${
 					revisionId ? '/' + revisionId : ''
 				}`,
+			revisionURLParams: { context: 'view' },
 		};
 	} );
 }
