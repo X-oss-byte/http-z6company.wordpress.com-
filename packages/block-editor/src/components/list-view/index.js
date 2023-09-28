@@ -215,6 +215,7 @@ function ListViewComponent(
 			insertedBlock,
 			setInsertedBlock,
 			treeGridElementRef: elementRef,
+			rootClientId,
 		} ),
 		[
 			draggedClientIds,
@@ -226,6 +227,7 @@ function ListViewComponent(
 			AdditionalBlockContent,
 			insertedBlock,
 			setInsertedBlock,
+			rootClientId,
 		]
 	);
 
