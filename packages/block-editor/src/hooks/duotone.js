@@ -15,8 +15,7 @@ import {
 } from '@wordpress/blocks';
 import { createHigherOrderComponent, useInstanceId } from '@wordpress/compose';
 import { addFilter } from '@wordpress/hooks';
-import { useMemo, useEffect } from '@wordpress/element';
-import { useDispatch } from '@wordpress/data';
+import { useMemo } from '@wordpress/element';
 
 /**
  * Internal dependencies
@@ -34,11 +33,9 @@ import {
 } from '../components/duotone/utils';
 import { getBlockCSSSelector } from '../components/global-styles/get-block-css-selector';
 import { scopeSelector } from '../components/global-styles/utils';
-import { useBlockSettings } from './utils';
+import { useBlockSettings, useStyleOverride } from './utils';
 import { default as StylesFiltersPanel } from '../components/global-styles/filters-panel';
 import { useBlockEditingMode } from '../components/block-editing-mode';
-import { store as blockEditorStore } from '../store';
-import { unlock } from '../lock-unlock';
 
 const EMPTY_ARRAY = [];
 
@@ -274,38 +271,28 @@ function DuotoneStyles( {
 
 	const isValidFilter = Array.isArray( colors ) || colors === 'unset';
 
-	const { setStyleOverride, deleteStyleOverride } = unlock(
-		useDispatch( blockEditorStore )
+	useStyleOverride(
+		isValidFilter
+			? {
+					css:
+						colors !== 'unset'
+							? getDuotoneStylesheet( selector, filterId )
+							: getDuotoneUnsetStylesheet( selector ),
+					__unstableType: 'presets',
+			  }
+			: undefined
 	);
-
-	useEffect( () => {
-		if ( ! isValidFilter ) return;
-
-		setStyleOverride( filterId, {
-			css:
-				colors !== 'unset'
-					? getDuotoneStylesheet( selector, filterId )
-					: getDuotoneUnsetStylesheet( selector ),
-			__unstableType: 'presets',
-		} );
-		setStyleOverride( `duotone-${ filterId }`, {
-			assets:
-				colors !== 'unset' ? getDuotoneFilter( filterId, colors ) : '',
-			__unstableType: 'svgs',
-		} );
-
-		return () => {
-			deleteStyleOverride( filterId );
-			deleteStyleOverride( `duotone-${ filterId }` );
-		};
-	}, [
-		isValidFilter,
-		colors,
-		selector,
-		filterId,
-		setStyleOverride,
-		deleteStyleOverride,
-	] );
+	useStyleOverride(
+		isValidFilter
+			? {
+					assets:
+						colors !== 'unset'
+							? getDuotoneFilter( filterId, colors )
+							: '',
+					__unstableType: 'svgs',
+			  }
+			: undefined
+	);
 
 	return null;
 }
