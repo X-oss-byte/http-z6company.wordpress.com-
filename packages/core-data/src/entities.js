@@ -213,8 +213,8 @@ export const rootEntitiesConfig = [
 			}`,
 		revisionURLParams: { context: 'view' },
 		supports: {
-			revisions: true
-		}
+			revisions: true,
+		},
 	},
 	{
 		label: __( 'Themes' ),
