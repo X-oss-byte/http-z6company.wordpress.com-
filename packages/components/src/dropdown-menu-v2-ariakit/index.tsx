@@ -14,6 +14,7 @@ import {
 	useMemo,
 	cloneElement,
 } from '@wordpress/element';
+import { isRTL } from '@wordpress/i18n';
 import { check, chevronRightSmall } from '@wordpress/icons';
 import { SVG, Circle } from '@wordpress/primitives';
 
@@ -209,6 +210,8 @@ const UnconnectedDropdownMenu = (
 
 	const parentContext = useContext( DropdownMenuContext );
 
+	const computedDirection = dir ?? isRTL() ? 'rtl' : 'ltr';
+
 	const dropdownMenuStore = Ariakit.useMenuStore( {
 		parent: parentContext?.store,
 		open,
@@ -219,6 +222,7 @@ const UnconnectedDropdownMenu = (
 		setOpen( willBeOpen ) {
 			onOpenChange?.( willBeOpen );
 		},
+		rtl: computedDirection === 'rtl',
 	} );
 
 	const contextValue = useMemo(

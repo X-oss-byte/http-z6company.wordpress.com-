@@ -27,6 +27,7 @@ export interface DropdownMenuProps {
 	gutter?: number;
 	shift?: number;
 	defaultValues?: Ariakit.MenuStoreProps[ 'defaultValues' ];
+	dir?: 'ltr' | 'rtl';
 }
 
 export interface DropdownMenuGroupProps
