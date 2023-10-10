@@ -32,7 +32,7 @@ export default function useGlobalStylesRevisions() {
 			__experimentalGetDirtyEntityRecords,
 			getCurrentUser,
 			getUsers,
-			getRevisions,
+			getEntityRevisions,
 			__experimentalGetCurrentGlobalStylesId,
 			isResolving,
 		} = select( coreStore );
@@ -40,7 +40,7 @@ export default function useGlobalStylesRevisions() {
 		const _currentUser = getCurrentUser();
 		const _isDirty = dirtyEntityRecords.length > 0;
 		const globalStylesRevisions =
-			getRevisions(
+			getEntityRevisions(
 				'root',
 				'globalStyles',
 				__experimentalGetCurrentGlobalStylesId()

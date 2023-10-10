@@ -1371,25 +1371,47 @@ export function getCurrentThemeGlobalStylesRevisions(
 	return state.themeGlobalStyleRevisions[ currentGlobalStylesId ];
 }
 
-// @TODO: document and types
-// Test on global styles revisions.
-export function getRevisions(
+/**
+ * Returns an Entity's revisions.
+ *
+ * @param state    State tree
+ * @param kind     Entity kind.
+ * @param name     Entity name.
+ * @param parentId Record's key whose revisions you wish to fetch.
+ * @param query    Optional query. If requesting specific
+ *                 fields, fields must always include the ID. For valid query parameters see revisions schema in [the REST API Handbook](https://developer.wordpress.org/rest-api/reference/). Then see the arguments available "Retrieve a [Entity kind]".
+ *
+ * @return Record.
+ */
+export function getEntityRevisions(
 	state: State,
 	kind: string,
 	name: string,
-	key: EntityRecordKey,
+	parentId: EntityRecordKey,
 	query?: GetRecordsHttpQuery
 ) {
 	return getEntityRecords(
 		state,
 		kind,
-		`${ name }:${ key }:revisions`,
+		`${ name }:${ parentId }:revisions`,
 		query
 	);
 }
 
-// @TODO: document and types
-export function getRevision(
+/**
+ * Returns a specific Entity revision.
+ *
+ * @param state    State tree
+ * @param kind     Entity kind.
+ * @param name     Entity name.
+ * @param parentId Record's key whose revisions you wish to fetch.
+ * @param key      The Revision's key.
+ * @param query    Optional query. If requesting specific
+ *                 fields, fields must always include the ID. For valid query parameters see revisions schema in [the REST API Handbook](https://developer.wordpress.org/rest-api/reference/). Then see the arguments available "Retrieve a [Entity kind]".
+ *
+ * @return Record.
+ */
+export function getEntityRevision(
 	state: State,
 	kind: string,
 	name: string,
