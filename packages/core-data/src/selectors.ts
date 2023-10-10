@@ -24,7 +24,6 @@ import {
 	getNormalizedCommaSeparable,
 	isRawAttribute,
 	setNestedValue,
-	parseEntityName,
 } from './utils';
 import type * as ET from './entity-types';
 import type { UndoManager } from '@wordpress/undo-manager';
@@ -326,16 +325,8 @@ export const getEntityRecord = createSelector(
 		key: EntityRecordKey,
 		query?: GetRecordsHttpQuery
 	): EntityRecord | undefined => {
-		const {
-			name: parsedName,
-			key: parsedKey,
-			isRevision,
-		} = parseEntityName( name );
-		const queriedState = isRevision
-			? state.entities.records?.[ kind ]?.[ parsedName ]?.revisions[
-					parsedKey
-			  ]
-			: state.entities.records?.[ kind ]?.[ name ]?.queriedData;
+		const queriedState =
+			state.entities.records?.[ kind ]?.[ name ]?.queriedData;
 		if ( ! queriedState ) {
 			return undefined;
 		}
@@ -369,26 +360,13 @@ export const getEntityRecord = createSelector(
 		return item;
 	} ) as GetEntityRecord,
 	( state: State, kind, name, recordId, query ) => {
-		const {
-			name: parsedName,
-			key: parsedKey,
-			isRevision,
-		} = parseEntityName( name );
 		const context = query?.context ?? 'default';
-
 		return [
-			isRevision
-				? state.entities.records?.[ kind ]?.[ parsedName ]?.revisions[
-						parsedKey
-				  ]?.items[ recordId ]
-				: state.entities.records?.[ kind ]?.[ name ]?.queriedData
-						?.items[ context ]?.[ recordId ],
-			isRevision
-				? state.entities.records?.[ kind ]?.[ parsedName ]?.revisions[
-						parsedKey
-				  ]?.itemIsComplete[ context ]?.[ recordId ]
-				: state.entities.records?.[ kind ]?.[ name ]?.queriedData
-						?.itemIsComplete[ context ]?.[ recordId ],
+			state.entities.records?.[ kind ]?.[ name ]?.queriedData?.items[
+				context
+			]?.[ recordId ],
+			state.entities.records?.[ kind ]?.[ name ]?.queriedData
+				?.itemIsComplete[ context ]?.[ recordId ],
 		];
 	}
 ) as GetEntityRecord;
@@ -543,32 +521,11 @@ export const getEntityRecords = ( <
 ): EntityRecord[] | null => {
 	// Queried data state is prepopulated for all known entities. If this is not
 	// assigned for the given parameters, then it is known to not exist.
-
-	const {
-		name: parsedName,
-		key: parsedKey,
-		isRevision,
-	} = parseEntityName( name );
-
-	if ( isRevision ) {
-		const queriedStateRevisions =
-			state.entities.records?.[ kind ]?.[ parsedName ]?.revisions[
-				parsedKey
-			];
-
-		if ( ! queriedStateRevisions ) {
-			return null;
-		}
-
-		return getQueriedItems( queriedStateRevisions, query );
-	}
-
 	const queriedState =
 		state.entities.records?.[ kind ]?.[ name ]?.queriedData;
 	if ( ! queriedState ) {
 		return null;
 	}
-
 	return getQueriedItems( queriedState, query );
 } ) as GetEntityRecords;
 
@@ -1383,20 +1340,22 @@ export function getCurrentThemeGlobalStylesRevisions(
  *
  * @return Record.
  */
-export function getEntityRevisions(
+export const getEntityRevisions = (
 	state: State,
 	kind: string,
 	name: string,
 	parentId: EntityRecordKey,
 	query?: GetRecordsHttpQuery
-) {
-	return getEntityRecords(
-		state,
-		kind,
-		`${ name }:${ parentId }:revisions`,
-		query
-	);
-}
+) => {
+	const queriedStateRevisions =
+		state.entities.records?.[ kind ]?.[ name ]?.revisions[ parentId ];
+
+	if ( ! queriedStateRevisions ) {
+		return null;
+	}
+
+	return getQueriedItems( queriedStateRevisions, query );
+};
 
 /**
  * Returns a specific Entity revision.
@@ -1411,19 +1370,58 @@ export function getEntityRevisions(
  *
  * @return Record.
  */
-export function getEntityRevision(
-	state: State,
-	kind: string,
-	name: string,
-	parentId: EntityRecordKey,
-	key: EntityRecordKey,
-	query?: GetRecordsHttpQuery
-) {
-	return getEntityRecord(
-		state,
-		kind,
-		`${ name }:${ parentId }:revisions`,
-		key,
-		query
-	);
-}
+export const getEntityRevision = createSelector(
+	(
+		state: State,
+		kind: string,
+		name: string,
+		parentId: EntityRecordKey,
+		key: EntityRecordKey,
+		query?: GetRecordsHttpQuery
+	) => {
+		const queriedRevisionsState =
+			state.entities.records?.[ kind ]?.[ name ]?.revisions[ parentId ];
+
+		if ( ! queriedRevisionsState ) {
+			return undefined;
+		}
+
+		const context = query?.context ?? 'default';
+
+		if ( query === undefined ) {
+			// If expecting a complete item, validate that completeness.
+			if ( ! queriedRevisionsState.itemIsComplete[ context ]?.[ key ] ) {
+				return undefined;
+			}
+
+			return queriedRevisionsState.items[ context ][ key ];
+		}
+
+		const item = queriedRevisionsState.items[ context ]?.[ key ];
+
+		if ( item && query._fields ) {
+			const filteredItem = {};
+			const fields = getNormalizedCommaSeparable( query._fields ) ?? [];
+			for ( let f = 0; f < fields.length; f++ ) {
+				const field = fields[ f ].split( '.' );
+				let value = item;
+				field.forEach( ( fieldName ) => {
+					value = value?.[ fieldName ];
+				} );
+				setNestedValue( filteredItem, field, value );
+			}
+			return filteredItem;
+		}
+
+		return item;
+	},
+	( state: State, kind, name, parentId, key, query ) => {
+		const context = query?.context ?? 'default';
+		return [
+			state.entities.records?.[ kind ]?.[ name ]?.revisions[ parentId ]
+				?.items[ key ],
+			state.entities.records?.[ kind ]?.[ name ]?.revisions[ parentId ]
+				?.itemIsComplete[ context ]?.[ key ],
+		];
+	}
+);
