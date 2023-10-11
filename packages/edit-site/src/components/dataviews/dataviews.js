@@ -30,6 +30,7 @@ import ListView from './list-view';
 import { Pagination } from './pagination';
 import ViewActions from './view-actions';
 import TextFilter from './text-filter';
+import AddFilter from './add-filter';
 import { moreVertical } from '@wordpress/icons';
 
 export default function DataViews( {
@@ -158,6 +159,7 @@ export default function DataViews( {
 			<VStack spacing={ 4 }>
 				<HStack justify="space-between">
 					<TextFilter onChange={ dataView.setGlobalFilter } />
+					<AddFilter dataView={ dataView } />
 					<ViewActions dataView={ dataView } />
 				</HStack>
 				{ /* This component will be selected based on viewConfigs. Now we only have the list view. */ }
