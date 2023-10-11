@@ -58,6 +58,7 @@ export default function PagePages() {
 			order: view.sort.direction,
 			orderby: view.sort.field,
 			search: view.search,
+			author: view.filters?.author,
 			status: [ 'publish', 'draft' ],
 		} ),
 		[ view ]
@@ -68,6 +69,10 @@ export default function PagePages() {
 		totalItems,
 		totalPages,
 	} = useEntityRecords( 'postType', 'page', queryArgs );
+
+	const { records: authors } = useEntityRecords( 'root', 'user', {
+		who: 'authors',
+	} );
 
 	const paginationInfo = useMemo(
 		() => ( {
@@ -118,8 +123,10 @@ export default function PagePages() {
 					);
 				},
 				renderFilter: () => {
-					// TODO: request them from API.
-					const authors = [ 'admin-1', 'admin-2' ];
+					if ( ! authors ) {
+						return null;
+					}
+
 					return (
 						<DropdownMenuV2
 							key={ 'filter-author' }
@@ -133,7 +140,7 @@ export default function PagePages() {
 							{ authors.map( ( author ) => {
 								return (
 									<DropdownMenuItemV2
-										key={ author }
+										key={ author.id }
 										prefix={
 											view.filters?.author !==
 												undefined && (
@@ -143,10 +150,18 @@ export default function PagePages() {
 										role="menuitemcheckbox"
 										onSelect={ ( event ) => {
 											event.preventDefault();
-											// TODO: dispatch request to update the view.
+											setView( ( currentView ) => {
+												return {
+													...currentView,
+													filters: {
+														...currentView.filters,
+														author: author.id,
+													},
+												};
+											} );
 										} }
 									>
-										{ author }
+										{ author.name }
 									</DropdownMenuItemV2>
 								);
 							} ) }
@@ -163,7 +178,7 @@ export default function PagePages() {
 				enableColumnFilter: false,
 			},
 		],
-		[ postStatuses ]
+		[ postStatuses, authors ]
 	);
 
 	const trashPostAction = useTrashPostAction();
