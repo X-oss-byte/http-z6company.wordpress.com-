@@ -159,9 +159,20 @@ export default function DataViews( {
 			<VStack spacing={ 4 }>
 				<HStack justify="space-between">
 					<TextFilter onChange={ dataView.setGlobalFilter } />
-					{
-						// Object.keys( view.filters ).map( ( key ) => key )
-					 }
+					{ Object.keys( view.filters ).map( ( key ) => {
+						const field = dataView
+							.getAllColumns()
+							.find(
+								( column ) =>
+									column.columnDef.renderFilter &&
+									column.id === key
+							);
+						if ( ! field ) {
+							return null;
+						}
+
+						return field.columnDef.renderFilter();
+					} ) }
 					<AddFilter
 						dataView={ dataView }
 						filters={ view.filters }
