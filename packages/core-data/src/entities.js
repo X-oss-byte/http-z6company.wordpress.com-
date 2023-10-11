@@ -339,11 +339,13 @@ async function loadPostTypeEntities() {
 			getSyncObjectId: ( id ) => id,
 			supportsPagination: true,
 			getRevisionsUrl: ( parentId, revisionId ) =>
-				`/${ namespace }/${
-					postType.rest_base
-				}/${ parentId }/revisions${
-					revisionId ? '/' + revisionId : ''
-				}`,
+				postType?.supports?.revisions
+					? `/${ namespace }/${
+							postType.rest_base
+					  }/${ parentId }/revisions${
+							revisionId ? '/' + revisionId : ''
+					  }`
+					: undefined,
 			revisionURLParams: { context: 'view' },
 		};
 	} );

@@ -902,7 +902,7 @@ describe( 'getEntityRevisions', () => {
 									},
 									queries: {
 										default: {
-											'': [ 10 ],
+											'': { itemIds: [ 10 ] },
 										},
 									},
 								},
