@@ -343,18 +343,21 @@ const receiveRevisionQueries = compose( [
 	// Queries shape is shared, but keyed by query `stableKey` part. Original
 	// reducer tracks only a single query object.
 	onSubKey( 'stableKey' ),
-] )( ( state = null, action ) => {
+] )( ( state = {}, action ) => {
 	const { type, page, perPage, key = DEFAULT_ENTITY_KEY } = action;
 	if ( type !== 'RECEIVE_ITEM_REVISIONS' ) {
 		return state;
 	}
 
-	return getMergedItemIds(
-		state || [],
-		action.items.map( ( item ) => item[ key ] ),
-		page,
-		perPage
-	);
+	return {
+		itemIds: getMergedItemIds(
+			state?.itemIds || [],
+			action.items.map( ( item ) => item[ key ] ),
+			page,
+			perPage
+		),
+		meta: action.meta,
+	};
 } );
 
 export function revisionItemIsComplete( state = {}, action ) {
