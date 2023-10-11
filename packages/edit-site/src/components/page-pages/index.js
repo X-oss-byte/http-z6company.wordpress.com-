@@ -142,14 +142,13 @@ export default function PagePages() {
 									<DropdownMenuItemV2
 										key={ author.id }
 										prefix={
-											view.filters?.author !==
-												undefined && (
+											view.filters?.author ===
+												author.id && (
 												<Icon icon={ check } />
 											)
 										}
 										role="menuitemcheckbox"
-										onSelect={ ( event ) => {
-											event.preventDefault();
+										onSelect={ () => {
 											setView( ( currentView ) => {
 												return {
 													...currentView,
@@ -178,7 +177,7 @@ export default function PagePages() {
 				enableColumnFilter: false,
 			},
 		],
-		[ postStatuses, authors ]
+		[ postStatuses, authors, view ]
 	);
 
 	const trashPostAction = useTrashPostAction();
