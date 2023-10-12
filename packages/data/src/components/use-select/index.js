@@ -35,6 +35,7 @@ const renderQueue = createQueue();
  * @template {MapSelect|StoreDescriptor<any>} T
  */
 
+let subsCount = 0;
 function Store( registry, suspense ) {
 	const select = suspense ? registry.suspendSelect : registry.select;
 	const queueContext = {};
@@ -79,7 +80,22 @@ function Store( registry, suspense ) {
 
 			const unsubs = [];
 			function subscribeStore( storeName ) {
-				unsubs.push( registry.subscribe( onChange, storeName ) );
+				const unsub = registry.subscribe( onChange, storeName );
+				if ( storeName === 'core/block-editor' ) {
+					subsCount++;
+					if ( subsCount % 1000 === 0 ) {
+						console.log( 'sub block-editor', subsCount );
+					}
+				}
+				unsubs.push( () => {
+					if ( storeName === 'core/block-editor' ) {
+						if ( subsCount % 1000 === 0 ) {
+							console.log( 'unsub block-editor', subsCount );
+						}
+						subsCount--;
+					}
+					unsub();
+				} );
 			}
 
 			for ( const storeName of activeStores ) {

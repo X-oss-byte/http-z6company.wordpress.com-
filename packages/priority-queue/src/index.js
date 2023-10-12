@@ -44,6 +44,8 @@ import requestIdleCallback from './request-idle-callback';
  * @property {WPPriorityQueueReset} reset  Reset queue.
  */
 
+let total = 0;
+let count = 0;
 /**
  * Creates a context-aware queue that only executes
  * the last task of a given context.
@@ -88,10 +90,13 @@ export const createQueue = () => {
 	 *                                       animation frame timestamp.
 	 */
 	const runWaitingList = ( deadline ) => {
+		let its = 0;
+		const srem =
+			'number' === typeof deadline ? 0 : deadline.timeRemaining();
 		for ( const [ nextElement, callback ] of waitingList ) {
 			waitingList.delete( nextElement );
 			callback();
-
+			its++;
 			if (
 				'number' === typeof deadline ||
 				deadline.timeRemaining() <= 0
@@ -99,7 +104,30 @@ export const createQueue = () => {
 				break;
 			}
 		}
-
+		const frem =
+			'number' === typeof deadline ? 0 : deadline.timeRemaining();
+		const time = srem - frem;
+		if ( time > 0 ) {
+			const speed = ( its / ( srem - frem ) ) * 1000;
+			total += speed;
+			count++;
+			console.log(
+				'ran waiting list: speed',
+				Math.floor( speed ),
+				'i/s',
+				'avg',
+				Math.floor( total / count ),
+				'i/s',
+				'its',
+				its,
+				'srem',
+				srem,
+				'frem',
+				frem,
+				'queued',
+				waitingList.size
+			);
+		}
 		if ( waitingList.size === 0 ) {
 			isRunning = false;
 			return;
